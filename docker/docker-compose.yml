@@ -1,0 +1,66 @@
+services:
+  cp26mvc-php:
+    #image: dunglas/frankenphp
+    # uncomment the following line if you want to use a custom Dockerfile
+    build: .
+    # uncomment the following line if you want to run this in a production environment
+    # restart: always
+    ports:
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ../public:/app/public
+      - caddy_data:/data
+      - caddy_config:/config
+    # comment the following line in production, it allows to have nice human-readable logs in dev
+    tty: true
+    links:
+      - cp26mvc-db
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+    
+  cp26mvc-db:
+    container_name: cp26mvc-docker-mysql
+    image: mariadb:latest
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-cp26mvc-data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DB}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    command: --innodb-use-native-aio=0
+
+  cp26b6-phpmyadmin:
+      container_name: cp26mvc-docker-phpmyadmin
+      image: phpmyadmin/phpmyadmin
+      links:
+        - cp26mvc-db
+      ports:
+        - 8000:80
+      environment:
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - PMA_USER=${MYSQL_USER}
+        - PMA_PASSWORD=${MYSQL_PASSWORD}
+        - PMA_ARBITRARY="1"
+        - PMA_HOST=${MYSQL_HOST}
+        - UPLOAD_LIMIT=300M
+
+  cp26b6-mailhog:
+      image: mailhog/mailhog
+      ports:
+        - "1025:1025"
+        - "8025:8025"
+
+
+# Volumes needed for Caddy certificates and configuration
+volumes:
+  caddy_data:
+  caddy_config:
+  db-cp26mvc-data:
